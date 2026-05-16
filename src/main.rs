@@ -673,23 +673,30 @@ fn format_cli_error(error: &Error) -> String {
     }
     lines.push(format!("hint: {}", classification.hint));
 
-    let details = dedup_details(&chain)
-        .into_iter()
-        .filter(|detail| Some(detail) != context.as_ref())
-        .collect::<Vec<_>>();
-    if !details.is_empty() {
-        lines.push("details:".to_string());
-        for detail in details.into_iter().take(4) {
-            lines.push(format!("  - {detail}"));
-        }
+    if classification.show_details {
+        let details = dedup_details(&chain)
+            .into_iter()
+            .filter(|detail| Some(detail) != context.as_ref())
+            .collect::<Vec<_>>();
+        append_details(&mut lines, details);
     }
 
     lines.join("\n")
 }
 
+fn append_details(lines: &mut Vec<String>, details: Vec<String>) {
+    if !details.is_empty() {
+        lines.push("details:".to_string());
+        for detail in details.into_iter().take(4) {
+            lines.push(format!("  - {}", shorten_detail(&detail)));
+        }
+    }
+}
+
 struct ErrorClassification {
     summary: &'static str,
     hint: &'static str,
+    show_details: bool,
 }
 
 fn classify_error(text: &str) -> ErrorClassification {
@@ -700,13 +707,19 @@ fn classify_error(text: &str) -> ErrorClassification {
         return ErrorClassification {
             summary: "AWS credentials are expired",
             hint: "refresh AWS credentials and retry; for AWS SSO run `aws sso login`, or pass `--profile <name>` for a valid profile",
+            show_details: false,
         };
     }
 
-    if text.contains("no credentials") || text.contains("failed to load credentials") {
+    if text.contains("no credentials")
+        || text.contains("failed to load credentials")
+        || text.contains("no providers in chain provided credentials")
+        || text.contains("credential provider was not enabled")
+    {
         return ErrorClassification {
             summary: "AWS credentials are not available",
             hint: "configure AWS credentials, set AWS_PROFILE, or pass `--profile <name>`",
+            show_details: false,
         };
     }
 
@@ -714,12 +727,14 @@ fn classify_error(text: &str) -> ErrorClassification {
         return ErrorClassification {
             summary: "AWS API access was denied",
             hint: "check the selected AWS profile and IAM permissions for the requested scan",
+            show_details: true,
         };
     }
 
     ErrorClassification {
         summary: "command failed",
         hint: "rerun with a valid input path, database, or AWS profile depending on the command context",
+        show_details: true,
     }
 }
 
@@ -749,10 +764,25 @@ fn dedup_details(chain: &[String]) -> Vec<String> {
 }
 
 fn is_low_signal_detail(cause: &str) -> bool {
+    let lower = cause.to_lowercase();
     matches!(
         cause,
         "dispatch failure" | "other" | "an error occurred while loading credentials"
     ) || cause.starts_with("AccessDeniedException: AccessDeniedException")
+        || lower.contains("providererror(")
+        || lower.contains("aws_request_id")
+}
+
+fn shorten_detail(detail: &str) -> String {
+    const MAX_DETAIL_LEN: usize = 240;
+
+    let mut chars = detail.chars();
+    let shortened = chars.by_ref().take(MAX_DETAIL_LEN).collect::<String>();
+    if chars.next().is_some() {
+        format!("{shortened}...")
+    } else {
+        shortened
+    }
 }
 
 #[cfg(test)]
@@ -772,7 +802,26 @@ mod tests {
         assert!(formatted.contains("cloudmapper error: AWS credentials are expired"));
         assert!(formatted.contains("context: calling sts:GetCallerIdentity"));
         assert!(formatted.contains("aws sso login"));
+        assert!(!formatted.contains("details:"));
         assert!(!formatted.contains("Caused by:"));
+    }
+
+    #[test]
+    fn hides_repeated_aws_sdk_provider_chain_for_expired_sso() {
+        let error = anyhow!(
+            "AccessDeniedException: The refresh token has expired. (ProviderError(ProviderError {{ source: RefreshFailed, aws_request_id: abc }}))"
+        )
+        .context("failed to refresh cached Login token: Your session has expired.")
+        .context("an error occurred while loading credentials")
+        .context("dispatch failure")
+        .context("calling sts:GetCallerIdentity");
+
+        let formatted = format_cli_error(&error);
+
+        assert_eq!(
+            formatted,
+            "cloudmapper error: AWS credentials are expired\ncontext: calling sts:GetCallerIdentity\nhint: refresh AWS credentials and retry; for AWS SSO run `aws sso login`, or pass `--profile <name>` for a valid profile"
+        );
     }
 
     #[test]
@@ -784,5 +833,19 @@ mod tests {
         assert!(formatted.contains("cloudmapper error: command failed"));
         assert!(formatted.contains("context: reading Terraform state terraform.tfstate"));
         assert!(formatted.contains("details:"));
+    }
+
+    #[test]
+    fn formats_missing_aws_credentials_as_actionable_error() {
+        let error = anyhow!("the credential provider was not enabled")
+            .context("no providers in chain provided credentials")
+            .context("calling sts:GetCallerIdentity");
+
+        let formatted = format_cli_error(&error);
+
+        assert_eq!(
+            formatted,
+            "cloudmapper error: AWS credentials are not available\ncontext: calling sts:GetCallerIdentity\nhint: configure AWS credentials, set AWS_PROFILE, or pass `--profile <name>`"
+        );
     }
 }
