@@ -390,10 +390,8 @@ CLI failures are printed as a compact block on stderr:
 ```text
 cloudmapper error: AWS credentials are expired
 context: calling sts:GetCallerIdentity
-hint: refresh AWS credentials and retry; for AWS SSO run `aws sso login`, or pass `--profile <name>` for a valid profile
-details:
-  - failed to refresh cached Login token: Your session has expired. Please reauthenticate.
-  - AccessDeniedException: The refresh token has expired.
+hint: for SSO, run `aws sso login --profile <name>` for the same profile
+      if SSO config is missing, run `aws configure sso --profile <name>` first
 ```
 
 Noisy AWS SDK warning chains are suppressed by default so the actionable
