@@ -789,11 +789,24 @@ mod tests {
     #[test]
     fn ui_assets_expose_spread_mode() {
         assert!(INDEX_HTML.contains("id=\"spread\""));
+        assert!(INDEX_HTML.contains("id=\"toggle-inspector\""));
+        assert!(INDEX_HTML.contains("id=\"toggle-findings\""));
+        assert!(INDEX_HTML.contains("class=\"panel-toggle\""));
+        assert!(INDEX_HTML.contains("data-theme=\"light\""));
+        assert!(INDEX_HTML.contains("class=\"graph-header\""));
         assert!(INDEX_HTML.contains("icon-spread"));
+        assert!(INDEX_HTML.contains("icon-panel-left"));
+        assert!(INDEX_HTML.contains("icon-panel-right"));
         assert!(APP_CSS.contains("#spread.active"));
+        assert!(APP_CSS.contains(".workspace.hide-inspector"));
+        assert!(APP_CSS.contains(".workspace.hide-findings"));
         assert!(APP_JS.contains("function spreadGraph()"));
         assert!(APP_JS.contains("function toggleSpreadMode()"));
+        assert!(APP_JS.contains("function togglePanel(panel)"));
+        assert!(APP_JS.contains("? theme : \"light\""));
         assert!(APP_JS.contains("params.set(\"spread\", \"1\")"));
+        assert!(APP_JS.contains("params.set(\"inspector\", \"0\")"));
+        assert!(APP_JS.contains("params.set(\"findingsPanel\", \"0\")"));
         assert!(APP_JS.contains("Spread graph"));
         assert!(APP_JS.contains("Compact graph"));
     }

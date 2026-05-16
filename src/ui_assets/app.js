@@ -1,11 +1,17 @@
 const state = {
   graph: null,
   findings: [],
+  findingsRunId: null,
   cy: null,
   viewMode: "graph",
   groupBy: "environment",
-  theme: "dark",
+  theme: "light",
   spreadMode: false,
+  panels: {
+    inspector: true,
+    findings: true,
+  },
+  visible: { nodes: 0, total: 0 },
   focusMode: "all",
   selection: null,
   selectedFinding: null,
@@ -284,7 +290,9 @@ function nodeMatchesFocus(data) {
 
 function applyFilters() {
   if (!state.cy) {
-    updateVisibleCount(0, state.graph?.nodes?.length || 0);
+    const nodes = currentFilteredNodeData();
+    updateVisibleCount(nodes.length, state.graph?.nodes?.length || 0);
+    renderFilteredPanels(nodes);
     renderCurrentView();
     return;
   }
@@ -296,6 +304,7 @@ function applyFilters() {
     return edge.source().visible() && edge.target().visible();
   }).removeClass("hidden");
   updateVisibleCount(visibleNodes.length, state.cy.nodes().length);
+  renderFilteredPanels(visibleNodes.map((node) => node.data()));
   renderCurrentView();
 }
 
@@ -344,7 +353,7 @@ function renderGraph(payload) {
   populateServices(payload.summary.serviceCounts || []);
   populateFacets(payload.nodes || []);
   updateSummary(payload.summary);
-  renderRiskSummary(payload.summary, payload.nodes || []);
+  renderRiskSummary((payload.nodes || []).map((node) => node.data));
 
   if (!payload.nodes.length) {
     $("#cy").innerHTML = emptyState(
@@ -529,7 +538,25 @@ function updateSummary(summary) {
 }
 
 function updateVisibleCount(visible, total) {
+  state.visible = { nodes: visible, total };
   $("#visible-count").textContent = `${visible} / ${total}`;
+  syncGraphEmptyState();
+}
+
+function syncGraphEmptyState() {
+  const overlay = $("#graph-empty");
+  if (!overlay) return;
+  const show = state.viewMode === "graph" && state.visible.total > 0 && state.visible.nodes === 0;
+  overlay.hidden = !show;
+  if (!show) {
+    overlay.innerHTML = "";
+    return;
+  }
+  overlay.innerHTML = `
+    <strong>No matching resources</strong>
+    <span>Current filters hide every resource in this scan.</span>
+    <button type="button" data-reset-view>Clear filters</button>
+  `;
 }
 
 function renderCurrentView() {
@@ -544,6 +571,7 @@ function renderCurrentView() {
   const graphActive = state.viewMode === "graph";
   cyContainer.hidden = !graphActive;
   d3Container.hidden = graphActive;
+  syncGraphEmptyState();
 
   if (graphActive) {
     if (state.cy) {
@@ -811,6 +839,52 @@ function buildExposureAtlasData() {
 
 function graphNodeData() {
   return (state.graph?.nodes || []).map((node) => node.data);
+}
+
+function currentFilteredNodeData() {
+  return graphNodeData().filter(dataMatchesFilters);
+}
+
+function renderFilteredPanels(nodes = currentFilteredNodeData()) {
+  renderRiskSummary(nodes);
+  renderFindingList(nodes);
+}
+
+function filteredFindingList(nodes = currentFilteredNodeData()) {
+  if (!state.findings.length) return [];
+  const visibleIds = new Set(nodes.map((node) => node.id));
+  return state.findings.filter((finding) => findingMatchesNodeScope(finding, visibleIds)).sort(compareFindings);
+}
+
+function findingMatchesNodeScope(finding, visibleIds) {
+  if (state.filters.severity && finding.severity !== state.filters.severity) return false;
+  const relatedIds = findingRelatedNodeIds(finding);
+  if (relatedIds.length) return relatedIds.some((id) => visibleIds.has(id));
+  return !hasActiveGraphFilters();
+}
+
+function findingRelatedNodeIds(finding) {
+  return [
+    finding.aws_uid,
+    ...(Array.isArray(finding.blast_radius) ? finding.blast_radius : []),
+  ].filter(Boolean);
+}
+
+function hasActiveGraphFilters() {
+  const filters = state.filters;
+  return Boolean(
+    filters.search ||
+    filters.severity ||
+    filters.service ||
+    filters.environment ||
+    filters.application ||
+    filters.provider ||
+    filters.namespace ||
+    filters.owner ||
+    filters.findingsOnly ||
+    filters.managedOnly ||
+    state.focusMode !== "all"
+  );
 }
 
 function exposureCellFor(map, applicationValue, environmentValue) {
@@ -1913,13 +1987,21 @@ function populateFacetSelect(select, label, counts, current) {
   return select.value;
 }
 
-function renderRiskSummary(summary, nodes) {
+function renderRiskSummary(nodes = currentFilteredNodeData()) {
+  const filteredFindings = filteredFindingList(nodes);
+  const useFindings = state.findings.length > 0;
+  const criticalCount = useFindings
+    ? filteredFindings.filter((finding) => finding.severity === "critical").length
+    : nodes.filter((node) => node.severity === "critical").length;
+  const highCount = useFindings
+    ? filteredFindings.filter((finding) => finding.severity === "high").length
+    : nodes.filter((node) => node.severity === "high").length;
   const chips = [];
-  if (summary.criticalFindings) {
-    chips.push(riskChip(`${summary.criticalFindings} critical`, { severity: "critical" }, "critical"));
+  if (criticalCount) {
+    chips.push(riskChip(`${criticalCount} critical`, { severity: "critical" }, "critical"));
   }
-  if (summary.highFindings) {
-    chips.push(riskChip(`${summary.highFindings} high`, { severity: "high" }, "high"));
+  if (highCount) {
+    chips.push(riskChip(`${highCount} high`, { severity: "high" }, "high"));
   }
 
   const environment = topRiskFacet(nodes, "environment");
@@ -1943,7 +2025,7 @@ function renderRiskSummary(summary, nodes) {
 function topRiskFacet(nodes, key) {
   const counts = new Map();
   for (const node of nodes) {
-    const data = node.data;
+    const data = node.data || node;
     if (!data.severity || data.severity === "none") continue;
     increment(counts, data[key]);
   }
@@ -1966,16 +2048,26 @@ function increment(map, value) {
 }
 
 function renderFindings(payload) {
+  state.findingsRunId = payload.run_id || null;
   state.findings = payload.findings || [];
+  renderFilteredPanels();
+  renderCurrentView();
+}
+
+function renderFindingList(nodes = currentFilteredNodeData()) {
   const container = $("#findings");
   if (!state.findings.length) {
-    container.innerHTML = payload.run_id
+    container.innerHTML = state.findingsRunId
       ? emptyState("No compare findings", "The latest compare run is clean.")
       : emptyState("No compare run", "map.db has no persisted findings.");
-    renderCurrentView();
     return;
   }
-  container.innerHTML = state.findings.map((finding, index) => {
+  const findings = filteredFindingList(nodes);
+  if (!findings.length) {
+    container.innerHTML = emptyState("No matching findings", "Current filters hide all findings.");
+    return;
+  }
+  container.innerHTML = findings.map((finding, index) => {
     return `
       <div class="finding-item severity-${escapeHtml(finding.severity)}" data-index="${index}" aria-label="${escapeHtml(finding.severity)} ${escapeHtml(finding.finding_type)}">
         <span class="severity-dot ${escapeHtml(finding.severity)}" title="${escapeHtml(finding.severity)}" aria-hidden="true"></span>
@@ -1987,7 +2079,7 @@ function renderFindings(payload) {
   }).join("");
   container.querySelectorAll(".finding-item").forEach((item) => {
     item.addEventListener("click", () => {
-      const finding = state.findings[Number(item.dataset.index)];
+      const finding = findings[Number(item.dataset.index)];
       state.atlasSelection = null;
       state.attackSelection = null;
       showFinding(finding);
@@ -2003,7 +2095,6 @@ function renderFindings(payload) {
       }
     });
   });
-  renderCurrentView();
 }
 
 function showEmptySelection() {
@@ -2338,9 +2429,9 @@ function cycleViewMode() {
 function loadThemePreference() {
   try {
     const theme = localStorage.getItem(THEME_STORAGE_KEY);
-    return theme === "light" || theme === "dark" ? theme : "dark";
+    return theme === "light" || theme === "dark" ? theme : "light";
   } catch {
-    return "dark";
+    return "light";
   }
 }
 
@@ -2379,6 +2470,55 @@ function applyThemeToGraph() {
   const selection = state.selection;
   renderGraph(state.graph);
   restoreSelection(selection);
+}
+
+function togglePanel(panel) {
+  setPanelVisibility(panel, !state.panels[panel]);
+}
+
+function setPanelVisibility(panel, visible, options = {}) {
+  if (!Object.prototype.hasOwnProperty.call(state.panels, panel)) return;
+  const updateUrl = options.updateUrl !== false;
+  state.panels[panel] = Boolean(visible);
+  syncPanelLayout();
+  if (updateUrl) updateUrlFromFilters();
+}
+
+function syncPanelLayout(options = {}) {
+  const workspace = $(".workspace");
+  if (!workspace) return;
+  workspace.classList.toggle("hide-inspector", !state.panels.inspector);
+  workspace.classList.toggle("hide-findings", !state.panels.findings);
+  syncPanelControls();
+  if (options.refresh !== false) refreshGraphViewport();
+}
+
+function syncPanelControls() {
+  syncPanelButton("toggle-inspector", state.panels.inspector, "inspector");
+  syncPanelButton("toggle-findings", state.panels.findings, "findings");
+}
+
+function syncPanelButton(id, visible, label) {
+  const button = $(`#${id}`);
+  if (!button) return;
+  const action = visible ? "Hide" : "Show";
+  const title = `${action} ${label}`;
+  button.title = title;
+  button.setAttribute("aria-label", title);
+  button.setAttribute("aria-pressed", visible ? "true" : "false");
+  button.classList.toggle("active", visible);
+}
+
+function refreshGraphViewport() {
+  requestAnimationFrame(() => {
+    if (!state.graph) return;
+    if (state.viewMode === "graph" && state.cy) {
+      state.cy.resize();
+      state.cy.fit(undefined, 45);
+    } else {
+      renderCurrentView();
+    }
+  });
 }
 
 function restoreSelection(selection) {
@@ -2631,6 +2771,8 @@ function commandList() {
     { id: "layout-layers", label: "Layout: Layers", hint: "", icon: "icon-relation", run: () => setLayout("breadthfirst") },
     { id: "layout-force", label: "Layout: Force", hint: "", icon: "icon-relation", run: () => setLayout("cose") },
     { id: "layout-circle", label: "Layout: Circle", hint: "", icon: "icon-relation", run: () => setLayout("circle") },
+    { id: "panel-inspector", label: state.panels.inspector ? "Hide inspector" : "Show inspector", hint: "[", icon: "icon-panel-left", run: () => togglePanel("inspector") },
+    { id: "panel-findings", label: state.panels.findings ? "Hide findings" : "Show findings", hint: "]", icon: "icon-panel-right", run: () => togglePanel("findings") },
     { id: "spread", label: state.spreadMode ? "Compact graph" : "Spread graph", hint: "S", icon: "icon-spread", run: toggleSpreadMode },
     { id: "fit", label: "Fit graph", hint: "F", icon: "icon-fit", run: fitGraph },
     { id: "reset", label: "Clear filters", hint: "R", icon: "icon-reset", run: resetView },
@@ -2912,6 +3054,8 @@ function bindControls() {
     button.addEventListener("click", () => setViewMode(button.dataset.view));
   });
   $("#mode-cycle").addEventListener("click", cycleFocusMode);
+  $("#toggle-inspector").addEventListener("click", () => togglePanel("inspector"));
+  $("#toggle-findings").addEventListener("click", () => togglePanel("findings"));
   $("#layout").addEventListener("change", (event) => runLayout(event.target.value));
   $("#fit").addEventListener("click", fitGraph);
   $("#spread").addEventListener("click", toggleSpreadMode);
@@ -2948,6 +3092,11 @@ function bindControls() {
     const button = event.target.closest(".risk-chip");
     if (!button) return;
     applyChipFilter(button.dataset);
+  });
+  document.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-reset-view]");
+    if (!button) return;
+    resetView();
   });
 }
 
@@ -3000,6 +3149,8 @@ function loadFiltersFromUrl() {
   const group = params.get("group") || "environment";
   state.groupBy = GROUP_FIELDS[group] ? group : "environment";
   state.spreadMode = params.get("spread") === "1";
+  state.panels.inspector = params.get("inspector") !== "0";
+  state.panels.findings = params.get("findingsPanel") !== "0";
 }
 
 function syncControlsFromState() {
@@ -3016,6 +3167,7 @@ function syncControlsFromState() {
   syncModeControls();
   syncViewControls();
   syncSpreadControl();
+  syncPanelLayout({ refresh: false });
 }
 
 function updateUrlFromFilters() {
@@ -3034,6 +3186,8 @@ function updateUrlFromFilters() {
   if (state.viewMode !== "graph") params.set("view", state.viewMode);
   if (state.groupBy !== "environment") params.set("group", state.groupBy);
   if (state.spreadMode) params.set("spread", "1");
+  if (!state.panels.inspector) params.set("inspector", "0");
+  if (!state.panels.findings) params.set("findingsPanel", "0");
   const query = params.toString();
   const next = query ? `${window.location.pathname}?${query}` : window.location.pathname;
   window.history.replaceState(null, "", next);
@@ -3085,6 +3239,10 @@ function handleKeyboard(event) {
     clearSelection();
   } else if (event.key.toLowerCase() === "f") {
     fitGraph();
+  } else if (event.key === "[") {
+    togglePanel("inspector");
+  } else if (event.key === "]") {
+    togglePanel("findings");
   } else if (event.key.toLowerCase() === "s") {
     toggleSpreadMode();
   } else if (event.key.toLowerCase() === "r") {

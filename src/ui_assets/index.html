@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -59,6 +59,20 @@
         <path d="M19 19v-5"></path>
         <path d="M5 19h5"></path>
         <path d="M5 19v-5"></path>
+      </symbol>
+      <symbol id="icon-panel-left" viewBox="0 0 24 24">
+        <path d="M4 5h16v14H4z"></path>
+        <path d="M9 5v14"></path>
+        <path d="M6.5 9h.01"></path>
+        <path d="M6.5 12h.01"></path>
+        <path d="M6.5 15h.01"></path>
+      </symbol>
+      <symbol id="icon-panel-right" viewBox="0 0 24 24">
+        <path d="M4 5h16v14H4z"></path>
+        <path d="M15 5v14"></path>
+        <path d="M17.5 9h.01"></path>
+        <path d="M17.5 12h.01"></path>
+        <path d="M17.5 15h.01"></path>
       </symbol>
       <symbol id="icon-reset" viewBox="0 0 24 24">
         <path d="M4 12a8 8 0 1 0 3-6"></path>
@@ -167,9 +181,6 @@
           <button id="agent-copy" type="button" title="Copy agent context" aria-label="Copy agent context">
             <svg class="icon" aria-hidden="true"><use href="#icon-agent"></use></svg>
           </button>
-          <button id="theme-toggle" type="button" title="Light theme" aria-label="Light theme">
-            <svg class="icon" aria-hidden="true"><use href="#icon-sun"></use></svg>
-          </button>
           <button id="palette-open" type="button" title="Command palette" aria-label="Command palette">
             <svg class="icon" aria-hidden="true"><use href="#icon-command"></use></svg>
           </button>
@@ -215,48 +226,60 @@
           <span title="Relationships"><svg class="icon" aria-hidden="true"><use href="#icon-relation"></use></svg><strong id="metric-edges">0</strong></span>
           <span title="Terraform managed"><svg class="icon" aria-hidden="true"><use href="#icon-managed"></use></svg><strong id="metric-managed">0</strong></span>
           <span class="risk" title="Critical and high findings"><svg class="icon" aria-hidden="true"><use href="#icon-risk"></use></svg><strong id="metric-risk">0</strong></span>
+          <button id="theme-toggle" type="button" title="Dark theme" aria-label="Dark theme">
+            <svg class="icon" aria-hidden="true"><use href="#icon-moon"></use></svg>
+          </button>
         </div>
       </header>
 
       <main class="workspace">
         <aside class="inspector">
+          <button id="toggle-inspector" class="panel-toggle" type="button" title="Hide inspector" aria-label="Hide inspector" aria-pressed="true">
+            <svg class="icon" aria-hidden="true"><use href="#icon-panel-left"></use></svg>
+          </button>
           <section class="selection-panel" aria-label="Inspector">
             <div id="selection" class="empty">No selection</div>
           </section>
         </aside>
 
         <section class="graph-pane">
+          <div class="graph-header">
+            <div id="risk-summary" class="risk-summary" hidden></div>
+            <div class="view-switcher" aria-label="View mode">
+              <button class="view-button active" type="button" data-view="graph" title="Graph" aria-label="Graph">
+                <svg class="icon" aria-hidden="true"><use href="#icon-relation"></use></svg>
+              </button>
+              <button class="view-button" type="button" data-view="exposure" title="Exposure atlas" aria-label="Exposure atlas">
+                <svg class="icon" aria-hidden="true"><use href="#icon-atlas"></use></svg>
+              </button>
+              <button class="view-button" type="button" data-view="groups" title="Groups" aria-label="Groups">
+                <svg class="icon" aria-hidden="true"><use href="#icon-all"></use></svg>
+              </button>
+              <button class="view-button" type="button" data-view="attack" title="Attack paths" aria-label="Attack paths">
+                <svg class="icon" aria-hidden="true"><use href="#icon-attack"></use></svg>
+              </button>
+              <button class="view-button" type="button" data-view="drift" title="Drift" aria-label="Drift">
+                <svg class="icon" aria-hidden="true"><use href="#icon-drift"></use></svg>
+              </button>
+              <button class="view-button" type="button" data-view="remediation" title="Remediation" aria-label="Remediation">
+                <svg class="icon" aria-hidden="true"><use href="#icon-remediation"></use></svg>
+              </button>
+            </div>
+          </div>
           <div class="graph-status" aria-label="snapshot status">
             <span id="graph-subtitle">latest snapshot</span>
             <span id="scan-line">waiting for scan</span>
             <span id="visible-count">0 / 0</span>
-            <span id="risk-summary" class="risk-summary" hidden></span>
-          </div>
-          <div class="view-switcher" aria-label="View mode">
-            <button class="view-button active" type="button" data-view="graph" title="Graph" aria-label="Graph">
-              <svg class="icon" aria-hidden="true"><use href="#icon-relation"></use></svg>
-            </button>
-            <button class="view-button" type="button" data-view="exposure" title="Exposure atlas" aria-label="Exposure atlas">
-              <svg class="icon" aria-hidden="true"><use href="#icon-atlas"></use></svg>
-            </button>
-            <button class="view-button" type="button" data-view="groups" title="Groups" aria-label="Groups">
-              <svg class="icon" aria-hidden="true"><use href="#icon-all"></use></svg>
-            </button>
-            <button class="view-button" type="button" data-view="attack" title="Attack paths" aria-label="Attack paths">
-              <svg class="icon" aria-hidden="true"><use href="#icon-attack"></use></svg>
-            </button>
-            <button class="view-button" type="button" data-view="drift" title="Drift" aria-label="Drift">
-              <svg class="icon" aria-hidden="true"><use href="#icon-drift"></use></svg>
-            </button>
-            <button class="view-button" type="button" data-view="remediation" title="Remediation" aria-label="Remediation">
-              <svg class="icon" aria-hidden="true"><use href="#icon-remediation"></use></svg>
-            </button>
           </div>
           <div id="cy"></div>
           <div id="d3-view" class="d3-view" hidden></div>
+          <div id="graph-empty" class="graph-empty-overlay" hidden></div>
         </section>
 
         <aside class="sidebar findings-sidebar">
+          <button id="toggle-findings" class="panel-toggle" type="button" title="Hide findings" aria-label="Hide findings" aria-pressed="true">
+            <svg class="icon" aria-hidden="true"><use href="#icon-panel-right"></use></svg>
+          </button>
           <section class="findings-panel" aria-label="Findings">
             <div id="findings" class="finding-list"></div>
           </section>
