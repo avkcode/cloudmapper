@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="cloudmapper maps AWS and Kubernetes reality into agent-readable SQLite, JSON, and graph artifacts."
+    >
+    <title>cloudmapper</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0f0f;
+        --panel: rgba(22, 24, 25, 0.84);
+        --panel-strong: rgba(29, 31, 32, 0.94);
+        --line: rgba(255, 255, 255, 0.14);
+        --muted: #a7adad;
+        --text: #f6f7f4;
+        --green: #91f2b5;
+        --cyan: #83e7ef;
+        --amber: #f4c766;
+        --red: #ff6b6b;
+        --shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--bg);
+      }
+
+      body {
+        margin: 0;
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(135deg, rgba(145, 242, 181, 0.08), transparent 38%),
+          #0d0f0f;
+        background-size: 80px 80px, 80px 80px, auto, auto;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 48px));
+        margin: 0 auto;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        padding: 28px 0 16px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        text-decoration: none;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 2px solid rgba(255, 255, 255, 0.78);
+        transform: rotate(45deg);
+      }
+
+      .brand-mark span {
+        transform: rotate(-45deg);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(18, 19, 20, 0.76);
+      }
+
+      .nav-links a {
+        min-height: 36px;
+        padding: 10px 14px;
+        border-radius: 6px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-decoration: none;
+        text-transform: uppercase;
+      }
+
+      .nav-links a:hover,
+      .nav-links a:focus-visible {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.08);
+        outline: none;
+      }
+
+      .hero {
+        position: relative;
+        min-height: calc(100vh - 84px);
+        padding: 64px 0 42px;
+      }
+
+      .hero-art {
+        position: absolute;
+        inset: 34px -48px auto auto;
+        width: min(820px, 68vw);
+        height: auto;
+        color: var(--green);
+        opacity: 0.88;
+        filter: drop-shadow(0 34px 70px rgba(0, 0, 0, 0.42));
+        pointer-events: none;
+      }
+
+      .eyebrow {
+        width: min(760px, 100%);
+        margin: 0 auto 28px;
+        padding: 15px 20px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.055);
+        box-shadow: var(--shadow);
+        color: #dfe5e1;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: clamp(15px, 2vw, 22px);
+        font-weight: 800;
+        letter-spacing: 0;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 1;
+        width: min(860px, 100%);
+        padding-top: 16px;
+      }
+
+      h1 {
+        max-width: 820px;
+        margin: 0;
+        font-size: clamp(44px, 13vw, 166px);
+        line-height: 0.82;
+        letter-spacing: 0;
+      }
+
+      .lede {
+        max-width: 760px;
+        margin: 34px 0 0;
+        color: #bec4c4;
+        font-size: clamp(18px, 2vw, 23px);
+        line-height: 1.52;
+      }
+
+      .install {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: min(960px, 100%);
+        min-height: 72px;
+        margin-top: 36px;
+        padding: 13px 14px 13px 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(9, 10, 11, 0.82);
+        box-shadow: var(--shadow);
+      }
+
+      .install-tabs {
+        display: flex;
+        gap: 14px;
+        flex: 0 0 auto;
+      }
+
+      .tab {
+        border: 0;
+        border-bottom: 1px solid transparent;
+        padding: 0 0 4px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .tab.active {
+        color: var(--text);
+        border-color: currentColor;
+      }
+
+      .command {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        white-space: nowrap;
+        color: #f5f5f2;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .copy {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 42px;
+        height: 42px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .copy:hover,
+      .copy:focus-visible {
+        border-color: rgba(145, 242, 181, 0.7);
+        outline: none;
+      }
+
+      .quick-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .quick-links a {
+        padding: 11px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.055);
+        color: #e8ece8;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-decoration: none;
+        text-transform: uppercase;
+      }
+
+      .quick-links a:hover,
+      .quick-links a:focus-visible {
+        border-color: rgba(131, 231, 239, 0.72);
+        outline: none;
+      }
+
+      .below-fold-hint {
+        margin-top: 62px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .section {
+        padding: 74px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.09);
+      }
+
+      .section h2 {
+        margin: 0 0 22px;
+        font-size: clamp(34px, 5vw, 68px);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      .section-copy {
+        max-width: 760px;
+        margin: 0 0 30px;
+        color: #bbc1c1;
+        font-size: 18px;
+        line-height: 1.65;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .feature {
+        min-height: 150px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .feature strong {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 16px;
+      }
+
+      .feature span {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      figure {
+        margin: 0;
+      }
+
+      figure img {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-strong);
+        box-shadow: var(--shadow);
+      }
+
+      figcaption {
+        margin-top: 10px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 34px 0 46px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .map-line {
+        stroke-dasharray: 9 13;
+        animation: dash 12s linear infinite;
+      }
+
+      .pulse {
+        transform-origin: center;
+        animation: pulse 3.4s ease-in-out infinite;
+      }
+
+      .pulse:nth-of-type(2n) {
+        animation-delay: -0.8s;
+      }
+
+      .pulse:nth-of-type(3n) {
+        animation-delay: -1.6s;
+      }
+
+      .scan {
+        animation: scan 5.8s ease-in-out infinite;
+      }
+
+      .packet {
+        offset-path: path("M170 230 C260 130 392 128 488 228 C570 315 680 312 754 222");
+        animation: travel 5.8s linear infinite;
+      }
+
+      .packet.two {
+        animation-delay: -1.9s;
+      }
+
+      .packet.three {
+        animation-delay: -3.8s;
+      }
+
+      @keyframes dash {
+        to {
+          stroke-dashoffset: -160;
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.62;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.06);
+        }
+      }
+
+      @keyframes scan {
+        0%,
+        100% {
+          transform: translateY(-10px);
+          opacity: 0.16;
+        }
+        50% {
+          transform: translateY(220px);
+          opacity: 0.62;
+        }
+      }
+
+      @keyframes travel {
+        to {
+          offset-distance: 100%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .shell {
+          width: min(100% - 28px, 1180px);
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .nav-links {
+          width: 100%;
+          overflow-x: auto;
+        }
+
+        .hero {
+          min-height: auto;
+          padding-top: 34px;
+        }
+
+        .hero-art {
+          position: relative;
+          inset: auto;
+          width: 100%;
+          margin: 8px 0 12px;
+        }
+
+        .eyebrow {
+          margin-left: 0;
+        }
+
+        .install {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .copy {
+          width: 100%;
+        }
+
+        .feature-grid,
+        .screens {
+          grid-template-columns: 1fr;
+        }
+
+        .footer {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="shell nav">
+        <a class="brand" href="https://github.com/avkcode/cloudmapper" aria-label="cloudmapper GitHub repository">
+          <span class="brand-mark" aria-hidden="true"><span>C</span></span>
+          <span>cloudmapper</span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="#install">Install</a>
+          <a href="#screenshots">Screens</a>
+          <a href="https://github.com/avkcode/cloudmapper">GitHub</a>
+          <a href="https://github.com/avkcode/cloudmapper/releases/latest">Releases</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="shell hero" aria-labelledby="hero-title">
+          <svg class="hero-art" viewBox="0 0 940 520" role="img" aria-label="Animated cloudmapper graph pipeline">
+            <defs>
+              <linearGradient id="edge" x1="0" x2="1">
+                <stop offset="0%" stop-color="#83e7ef" />
+                <stop offset="48%" stop-color="#91f2b5" />
+                <stop offset="100%" stop-color="#f4c766" />
+              </linearGradient>
+              <filter id="soft">
+                <feGaussianBlur stdDeviation="4" />
+              </filter>
+            </defs>
+            <rect x="84" y="70" width="770" height="360" rx="16" fill="rgba(18,20,21,.72)" stroke="rgba(255,255,255,.14)" />
+            <path class="map-line" d="M170 230 C260 130 392 128 488 228 C570 315 680 312 754 222" fill="none" stroke="url(#edge)" stroke-width="3" />
+            <path d="M170 230 C260 130 392 128 488 228 C570 315 680 312 754 222" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="16" filter="url(#soft)" />
+
+            <g fill="none" stroke="rgba(255,255,255,.14)">
+              <path d="M120 160h700" />
+              <path d="M120 250h700" />
+              <path d="M120 340h700" />
+              <path d="M235 96v300" />
+              <path d="M365 96v300" />
+              <path d="M495 96v300" />
+              <path d="M625 96v300" />
+              <path d="M755 96v300" />
+            </g>
+
+            <g class="pulse">
+              <circle cx="168" cy="230" r="48" fill="rgba(131,231,239,.10)" stroke="#83e7ef" />
+              <circle cx="148" cy="214" r="9" fill="#83e7ef" />
+              <circle cx="180" cy="206" r="7" fill="#91f2b5" />
+              <circle cx="192" cy="244" r="11" fill="#f4c766" />
+              <text x="132" y="294" fill="#f6f7f4" font-family="ui-monospace, monospace" font-size="18" font-weight="700">AWS</text>
+            </g>
+
+            <g class="pulse">
+              <circle cx="352" cy="154" r="44" fill="rgba(145,242,181,.10)" stroke="#91f2b5" />
+              <rect x="329" y="132" width="16" height="16" rx="3" fill="#91f2b5" />
+              <rect x="357" y="132" width="16" height="16" rx="3" fill="#83e7ef" />
+              <rect x="343" y="160" width="16" height="16" rx="3" fill="#f4c766" />
+              <text x="324" y="218" fill="#f6f7f4" font-family="ui-monospace, monospace" font-size="18" font-weight="700">K8S</text>
+            </g>
+
+            <g>
+              <rect x="424" y="190" width="132" height="92" rx="12" fill="rgba(246,247,244,.08)" stroke="rgba(255,255,255,.22)" />
+              <line class="scan" x1="440" y1="204" x2="540" y2="204" stroke="#91f2b5" stroke-width="3" />
+              <text x="452" y="230" fill="#f6f7f4" font-family="ui-monospace, monospace" font-size="19" font-weight="800">map.db</text>
+              <text x="452" y="256" fill="#a7adad" font-family="ui-monospace, monospace" font-size="12">SQLite facts</text>
+            </g>
+
+            <g class="pulse">
+              <circle cx="754" cy="222" r="50" fill="rgba(244,199,102,.10)" stroke="#f4c766" />
+              <path d="M728 230h52M728 210h52M742 194v52M766 194v52" stroke="#f4c766" stroke-width="5" stroke-linecap="round" />
+              <text x="714" y="294" fill="#f6f7f4" font-family="ui-monospace, monospace" font-size="18" font-weight="700">AGENTS</text>
+            </g>
+
+            <circle class="packet" r="6" fill="#83e7ef" />
+            <circle class="packet two" r="6" fill="#91f2b5" />
+            <circle class="packet three" r="6" fill="#f4c766" />
+
+            <g font-family="ui-monospace, monospace" font-size="12" fill="#a7adad">
+              <text x="118" y="112">SCAN</text>
+              <text x="442" y="112">NORMALIZE</text>
+              <text x="708" y="112">EXPORT</text>
+              <text x="590" y="392">resources.jsonl · relationships.jsonl · graph.json</text>
+            </g>
+          </svg>
+
+          <div class="eyebrow">Map AWS + Kubernetes reality</div>
+          <div class="hero-copy">
+            <h1 id="hero-title">cloudmapper</h1>
+            <p class="lede">
+              A standalone Rust CLI that exports infrastructure reality into
+              agent-readable SQLite, JSONL, and graph artifacts. Scan AWS or
+              Kubernetes, import Terraform state, compare drift, and inspect the
+              result in a local Cytoscape graph UI.
+            </p>
+
+            <div id="install" class="install" aria-label="Install command">
+              <div class="install-tabs" role="tablist" aria-label="Install target">
+                <button class="tab active" type="button" data-target="linux">Linux</button>
+                <button class="tab" type="button" data-target="macos">macOS</button>
+              </div>
+              <code class="command" data-command>
+                curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-linux.tar.gz | tar -xz && sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper
+              </code>
+              <button class="copy" type="button" data-copy aria-label="Copy install command">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9 9h9v9H9zM6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="quick-links" aria-label="Project links">
+              <a href="https://github.com/avkcode/cloudmapper">Open GitHub</a>
+              <a href="https://github.com/avkcode/cloudmapper#first-five-minutes">First five minutes</a>
+              <a href="https://github.com/avkcode/cloudmapper/releases/latest">Download release</a>
+            </div>
+
+            <div class="below-fold-hint">Demos and local graph screenshots below</div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="shell">
+            <h2>One local map for scanners, Terraform, and agents.</h2>
+            <p class="section-copy">
+              cloudmapper writes a portable bundle with inventory, graph facts,
+              compare findings, and a queryable SQLite store. The format is
+              designed for direct inspection by humans and structured context
+              loading by AI agents.
+            </p>
+            <div class="feature-grid">
+              <div class="feature">
+                <strong>AWS + Kubernetes</strong>
+                <span>Scan cloud accounts or Kubernetes contexts into the same resource and relationship model.</span>
+              </div>
+              <div class="feature">
+                <strong>SQLite map.db</strong>
+                <span>Persist normalized resources, graph edges, Terraform mappings, and findings for local queries.</span>
+              </div>
+              <div class="feature">
+                <strong>Drift findings</strong>
+                <span>Compare scan reality against Terraform state and keep evidence with blast radius context.</span>
+              </div>
+              <div class="feature">
+                <strong>Agent export</strong>
+                <span>Emit one portable JSON artifact with redacted context ready for agent workflows.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="screenshots" class="section">
+          <div class="shell">
+            <h2>Cytoscape graph demos.</h2>
+            <p class="section-copy">
+              The built-in UI renders AWS and Kubernetes demo bundles without
+              external services. Generate the bundles locally with
+              <code>make demo</code> or <code>make demo-k8s</code>.
+            </p>
+            <div class="screens">
+              <figure>
+                <img src="screenshots/aws-demo.png" alt="AWS demo Cytoscape node graph showing resources, relationships, and findings">
+                <figcaption>AWS large-org demo</figcaption>
+              </figure>
+              <figure>
+                <img src="screenshots/k8s-demo.png" alt="Kubernetes demo Cytoscape node graph showing resources, relationships, and findings">
+                <figcaption>Kubernetes platform demo</figcaption>
+              </figure>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="shell footer">
+        <span>cloudmapper · agent-readable infrastructure maps</span>
+        <a href="https://github.com/avkcode/cloudmapper">github.com/avkcode/cloudmapper</a>
+      </footer>
+    </div>
+
+    <script>
+      const commands = {
+        linux:
+          "curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-linux.tar.gz | tar -xz && sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper",
+        macos:
+          "curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-macos.tar.gz | tar -xz && sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper",
+      };
+
+      const command = document.querySelector("[data-command]");
+      const copy = document.querySelector("[data-copy]");
+      const tabs = document.querySelectorAll("[data-target]");
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((item) => item.classList.toggle("active", item === tab));
+          command.textContent = commands[tab.dataset.target];
+        });
+      });
+
+      copy.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(command.textContent.trim());
+        copy.setAttribute("aria-label", "Copied install command");
+        setTimeout(() => copy.setAttribute("aria-label", "Copy install command"), 1400);
+      });
+    </script>
+  </body>
+</html>

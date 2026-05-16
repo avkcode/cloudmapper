@@ -6,6 +6,7 @@ It feeds agents structured resources, relationships, Terraform state mappings,
 drift and security findings, and a local graph UI backed by SQLite.
 
 [GitHub repository](https://github.com/avkcode/cloudmapper) ·
+[Landing page](https://avkcode.github.io/cloudmapper/) ·
 [Latest release](https://github.com/avkcode/cloudmapper/releases/latest)
 
 ## Install
