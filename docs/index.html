@@ -5,19 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>cloudmapper</title>
     <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0d0f0f;
+        --panel: rgba(20, 22, 23, 0.86);
+        --panel-strong: rgba(28, 30, 31, 0.92);
+        --line: rgba(255, 255, 255, 0.15);
+        --text: #f6f7f4;
+        --muted: #a8afaf;
+        --green: #91f2b5;
+        --cyan: #83e7ef;
+        --amber: #f4c766;
+        --shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+      }
+
       * {
         box-sizing: border-box;
       }
 
       html {
         min-width: 320px;
-        background: #0d0f0f;
+        background: var(--bg);
       }
 
       body {
         margin: 0;
-        color: #f6f7f4;
-        background: #0d0f0f;
+        color: var(--text);
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(135deg, rgba(145, 242, 181, 0.08), transparent 38%),
+          var(--bg);
+        background-size: 80px 80px, 80px 80px, auto, auto;
         font-family:
           ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
           monospace;
@@ -25,10 +44,42 @@
 
       main {
         display: grid;
-        gap: 18px;
+        gap: 48px;
         width: min(1180px, calc(100% - 32px));
         margin: 0 auto;
+        padding: 32px 0 52px;
+      }
+
+      .hero {
+        position: relative;
+        display: grid;
+        min-height: min(720px, calc(100vh - 64px));
+        align-items: center;
         padding: 24px 0;
+      }
+
+      .art {
+        position: absolute;
+        inset: 0 -44px auto auto;
+        width: min(820px, 68vw);
+        max-width: 100%;
+        opacity: 0.94;
+        filter: drop-shadow(0 34px 70px rgba(0, 0, 0, 0.42));
+        pointer-events: none;
+      }
+
+      .stack {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 16px;
+        width: min(960px, 100%);
+      }
+
+      .links {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
       }
 
       a,
@@ -36,41 +87,142 @@
         display: block;
         width: 100%;
         overflow-x: auto;
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.055);
-        color: #f6f7f4;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        color: var(--text);
         font-size: 14px;
-        line-height: 1.6;
-        padding: 14px;
+        line-height: 1.65;
+        padding: 16px;
         text-decoration: none;
         white-space: nowrap;
       }
 
       a:focus-visible {
-        outline: 2px solid #91f2b5;
+        outline: 2px solid var(--green);
         outline-offset: 2px;
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
       }
 
       img {
         display: block;
         width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.16);
+        border: 1px solid var(--line);
         border-radius: 8px;
-        background: #151718;
+        background: var(--panel-strong);
+        box-shadow: var(--shadow);
+      }
+
+      svg {
+        display: block;
+      }
+
+      @media (max-width: 860px) {
+        main {
+          gap: 28px;
+          padding-top: 18px;
+        }
+
+        .hero {
+          min-height: auto;
+          gap: 20px;
+          padding-top: 0;
+        }
+
+        .art {
+          position: relative;
+          inset: auto;
+          width: 100%;
+          order: -1;
+        }
+
+        .links,
+        .screens {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
     <main>
-      <a href="https://github.com/avkcode/cloudmapper">https://github.com/avkcode/cloudmapper</a>
-      <a href="https://github.com/avkcode/cloudmapper/releases/latest">https://github.com/avkcode/cloudmapper/releases/latest</a>
+      <section class="hero">
+        <svg class="art" viewBox="0 0 940 520" aria-hidden="true">
+          <defs>
+            <linearGradient id="edge" x1="0" x2="1">
+              <stop offset="0%" stop-color="#83e7ef" />
+              <stop offset="48%" stop-color="#91f2b5" />
+              <stop offset="100%" stop-color="#f4c766" />
+            </linearGradient>
+            <filter id="soft">
+              <feGaussianBlur stdDeviation="4" />
+            </filter>
+          </defs>
+          <rect x="84" y="70" width="770" height="360" rx="16" fill="rgba(18,20,21,.72)" stroke="rgba(255,255,255,.14)" />
+          <path d="M170 230 C260 130 392 128 488 228 C570 315 680 312 754 222" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="16" filter="url(#soft)" />
+          <path d="M170 230 C260 130 392 128 488 228 C570 315 680 312 754 222" fill="none" stroke="url(#edge)" stroke-width="3" stroke-dasharray="9 13" />
 
-      <code>curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-linux.tar.gz | tar -xz &amp;&amp; sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper</code>
-      <code>curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-macos.tar.gz | tar -xz &amp;&amp; sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper</code>
+          <g fill="none" stroke="rgba(255,255,255,.14)">
+            <path d="M120 160h700" />
+            <path d="M120 250h700" />
+            <path d="M120 340h700" />
+            <path d="M235 96v300" />
+            <path d="M365 96v300" />
+            <path d="M495 96v300" />
+            <path d="M625 96v300" />
+            <path d="M755 96v300" />
+          </g>
 
-      <img src="screenshots/aws-demo.png" alt="AWS demo Cytoscape node graph">
-      <img src="screenshots/k8s-demo.png" alt="Kubernetes demo Cytoscape node graph">
+          <g>
+            <circle cx="168" cy="230" r="48" fill="rgba(131,231,239,.10)" stroke="#83e7ef" />
+            <circle cx="148" cy="214" r="9" fill="#83e7ef" />
+            <circle cx="180" cy="206" r="7" fill="#91f2b5" />
+            <circle cx="192" cy="244" r="11" fill="#f4c766" />
+          </g>
+
+          <g>
+            <circle cx="352" cy="154" r="44" fill="rgba(145,242,181,.10)" stroke="#91f2b5" />
+            <rect x="329" y="132" width="16" height="16" rx="3" fill="#91f2b5" />
+            <rect x="357" y="132" width="16" height="16" rx="3" fill="#83e7ef" />
+            <rect x="343" y="160" width="16" height="16" rx="3" fill="#f4c766" />
+          </g>
+
+          <g>
+            <rect x="424" y="190" width="132" height="92" rx="12" fill="rgba(246,247,244,.08)" stroke="rgba(255,255,255,.22)" />
+            <line x1="440" y1="224" x2="540" y2="224" stroke="#91f2b5" stroke-width="3" />
+            <line x1="440" y1="248" x2="515" y2="248" stroke="#83e7ef" stroke-width="3" />
+          </g>
+
+          <g>
+            <circle cx="754" cy="222" r="50" fill="rgba(244,199,102,.10)" stroke="#f4c766" />
+            <path d="M728 230h52M728 210h52M742 194v52M766 194v52" stroke="#f4c766" stroke-width="5" stroke-linecap="round" />
+          </g>
+
+          <circle cx="262" cy="168" r="6" fill="#83e7ef" />
+          <circle cx="430" cy="172" r="6" fill="#91f2b5" />
+          <circle cx="618" cy="296" r="6" fill="#f4c766" />
+        </svg>
+
+        <div class="stack">
+          <div class="links">
+            <a href="https://github.com/avkcode/cloudmapper">https://github.com/avkcode/cloudmapper</a>
+            <a href="https://github.com/avkcode/cloudmapper/releases/latest">https://github.com/avkcode/cloudmapper/releases/latest</a>
+          </div>
+
+          <code>curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-linux.tar.gz | tar -xz &amp;&amp; sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper</code>
+          <code>curl -L https://github.com/avkcode/cloudmapper/releases/latest/download/cloudmapper-macos.tar.gz | tar -xz &amp;&amp; sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper</code>
+        </div>
+      </section>
+
+      <section class="screens">
+        <img src="screenshots/aws-demo.png" alt="AWS demo Cytoscape node graph">
+        <img src="screenshots/k8s-demo.png" alt="Kubernetes demo Cytoscape node graph">
+      </section>
     </main>
   </body>
 </html>
