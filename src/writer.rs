@@ -19,7 +19,7 @@ pub fn write_infra(out: &Path, inventory: &Inventory, allow_non_empty_out: bool)
         &inventory.relationships,
     )?;
     write_jsonl(out.join("errors.jsonl").as_path(), &inventory.errors)?;
-    write_inventory_db(&out.join("infra.sqlite"), inventory)?;
+    write_inventory_db(&out.join("map.db"), inventory)?;
     write_schemas(&out.join("schemas"))?;
 
     Ok(())
@@ -204,7 +204,7 @@ mod tests {
         assert!(temp.path().join("relationships.jsonl").exists());
         assert!(temp.path().join("errors.jsonl").exists());
         assert!(temp.path().join("graph.json").exists());
-        assert!(temp.path().join("infra.sqlite").exists());
+        assert!(temp.path().join("map.db").exists());
         assert!(temp.path().join("schemas/resource.schema.json").exists());
     }
 

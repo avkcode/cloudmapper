@@ -137,7 +137,7 @@ pub fn export_terraform_state(
     let state_id = match state_id {
         Some(state_id) => state_id.to_string(),
         None => latest_terraform_state_id(&connection)?
-            .context("no imported Terraform state found in SQLite db")?,
+            .context("no imported Terraform state found in map database")?,
     };
     export_terraform_state_from_connection(&connection, &state_id)
 }
@@ -230,7 +230,7 @@ fn export_terraform_state_from_connection(
             },
         )
         .optional()?
-        .with_context(|| format!("Terraform state {state_id} is not present in SQLite db"))?;
+        .with_context(|| format!("Terraform state {state_id} is not present in map database"))?;
 
     let mut statement = connection.prepare(
         r#"
@@ -376,7 +376,7 @@ mod tests {
     fn imports_and_exports_terraform_state_end_to_end() {
         let temp = tempdir().unwrap();
         let state_path = temp.path().join("terraform.tfstate");
-        let db_path = temp.path().join("infra.sqlite");
+        let db_path = temp.path().join("map.db");
         std::fs::write(&state_path, SAMPLE_TFSTATE).unwrap();
 
         let summary = import_terraform_state_file(&db_path, &state_path, None).unwrap();

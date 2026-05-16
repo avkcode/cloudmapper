@@ -74,12 +74,12 @@ pub fn compare_infra(
     let connection = open_cloudmapper_db(db_path)?;
     let scan_id = match scan_id {
         Some(scan_id) => scan_id.to_string(),
-        None => latest_scan_id(&connection)?.context("no AWS scan found in SQLite db")?,
+        None => latest_scan_id(&connection)?.context("no AWS scan found in map database")?,
     };
     let terraform_state_id = match terraform_state_id {
         Some(state_id) => state_id.to_string(),
         None => latest_terraform_state_id(&connection)?
-            .context("no imported Terraform state found in SQLite db")?,
+            .context("no imported Terraform state found in map database")?,
     };
     let mut report = compare_connection(&connection, &scan_id, &terraform_state_id)?;
     write_findings(&connection, &report)?;
@@ -457,7 +457,7 @@ mod tests {
     #[test]
     fn compare_reports_unmanaged_public_resource_with_blast_radius() {
         let temp = tempdir().unwrap();
-        let db_path = temp.path().join("infra.sqlite");
+        let db_path = temp.path().join("map.db");
         let state_path = temp.path().join("terraform.tfstate");
         write_inventory_db(&db_path, &sample_inventory()).unwrap();
         std::fs::write(&state_path, SAMPLE_TFSTATE).unwrap();
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn compare_reports_state_only_resource() {
         let temp = tempdir().unwrap();
-        let db_path = temp.path().join("infra.sqlite");
+        let db_path = temp.path().join("map.db");
         let state_path = temp.path().join("terraform.tfstate");
         write_inventory_db(&db_path, &sample_inventory()).unwrap();
         std::fs::write(&state_path, SAMPLE_TFSTATE).unwrap();

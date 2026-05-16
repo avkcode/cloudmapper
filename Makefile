@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 
 CARGO_ENV ?= CARGO_PROFILE_DEV_DEBUG=0 CARGO_BUILD_JOBS=1
-DB ?= infra/infra.sqlite
+DB ?= infra/map.db
 BIND ?= 127.0.0.1:8765
 
 .PHONY: help fmt check build buld test ui loc clean
@@ -10,7 +10,7 @@ help:
 	@printf 'cloudmapper Make targets\n\n'
 	@printf '  make build       Build the cloudmapper CLI\n'
 	@printf '  make test        Run unit tests\n'
-	@printf '  make check       Run fmt, check, and tests\n'
+	@printf '  make check       Run fmt, check, tests, and build\n'
 	@printf '  make fmt         Check Rust formatting\n'
 	@printf '  make ui          Serve the local Cytoscape UI\n'
 	@printf '  make loc         Count lines in source files\n'

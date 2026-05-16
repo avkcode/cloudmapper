@@ -1,9 +1,10 @@
 # cloudmapper
 
 `cloudmapper` is a standalone Rust CLI that exports AWS account reality into an
-agent-readable `infra/` bundle and SQLite knowledge store. It is designed to
-feed agents structured resources, relationships, Terraform state mappings,
-drift findings, and a local Cytoscape graph UI.
+agent-readable `infra/` bundle and `map.db` knowledge store. `map.db` is
+cloudmapper's map format, backed by SQLite so it remains easy to inspect and
+query. It is designed to feed agents structured resources, relationships,
+Terraform state mappings, drift findings, and a local Cytoscape graph UI.
 
 AI-generated documentation is intentionally out of scope for this phase; it can
 be layered on top of the structured store later.
@@ -21,7 +22,7 @@ Useful local targets:
 - `make build` builds the CLI.
 - `make test` runs unit tests.
 - `make check` runs formatting, type checking, tests, and a debug build.
-- `make ui DB=infra/infra.sqlite` serves the local Cytoscape UI.
+- `make ui DB=infra/map.db` serves the local Cytoscape UI.
 - `make loc` counts lines in source files.
 - `make clean` removes Cargo build output.
 
@@ -52,7 +53,7 @@ Useful options:
 infra/
   manifest.json
   inventory.json
-  infra.sqlite
+  map.db
   resources.jsonl
   relationships.jsonl
   errors.jsonl
@@ -62,10 +63,10 @@ infra/
     relationship.schema.json
 ```
 
-`inventory.json` is the complete document. The JSONL files are optimized for
-agent ingestion and indexing. `graph.json` contains nodes and edges derived from
-the same source facts. `infra.sqlite` stores the same scan as queryable local
-state and can also hold imported Terraform state snapshots.
+`inventory.json` is the complete scan document. The JSONL files are optimized
+for indexing. `graph.json` contains nodes and edges derived from the same source
+facts. `map.db` stores the same scan as queryable local state and can also hold
+imported Terraform state snapshots, compare findings, and UI data.
 
 Every resource has a stable `uid`:
 
@@ -107,9 +108,10 @@ The core scanner collects:
 Recoverable failures are written to `errors.jsonl` so an account scan can still
 produce a usable inventory when a service, region, or permission fails.
 
-## SQLite
+## Map Database
 
-Every scan writes `infra.sqlite` alongside the JSON files. The first schema
+Every scan writes `map.db` alongside the JSON files. It is a SQLite database,
+but the filename is treated as cloudmapper's map format. The first schema
 stores:
 
 - `scans`
@@ -119,24 +121,24 @@ stores:
 - `terraform_states`
 - `terraform_resource_instances`
 
-This is the local knowledge store that later compare, drift, graph, and MCP
+This is the local knowledge store that compare, drift, graph, export, and MCP
 commands can query without reloading the full JSON bundle.
 
 ## Terraform State
 
-Import a Terraform state file into the SQLite store:
+Import a Terraform state file into the map database:
 
 ```bash
 cloudmapper terraform import \
   --state terraform.tfstate \
-  --db infra/infra.sqlite
+  --db infra/map.db
 ```
 
 Export the imported Terraform state as normalized JSON:
 
 ```bash
 cloudmapper terraform export \
-  --db infra/infra.sqlite \
+  --db infra/map.db \
   --out terraform-resources.json
 ```
 
@@ -146,9 +148,9 @@ when an ARN is present. It does not write a Terraform-native `tfstate` file;
 the export format is a cloudmapper-normalized state view for compare and agent
 workflows.
 
-Terraform state can contain secrets. Treat `infra.sqlite` and Terraform export
-files as local sensitive artifacts unless they have been explicitly reviewed and
-redacted.
+Terraform state can contain secrets. Treat `map.db`, Terraform export files,
+and agent exports as local sensitive artifacts unless they have been explicitly
+reviewed and redacted.
 
 ## Compare
 
@@ -156,7 +158,7 @@ After a scan and Terraform import, compare AWS reality with Terraform state:
 
 ```bash
 cloudmapper compare \
-  --db infra/infra.sqlite \
+  --db infra/map.db \
   --out findings.json
 ```
 
@@ -167,15 +169,29 @@ The first compare engine emits structured findings for:
 - Terraform-managed public security groups
 - Terraform state resources absent from the AWS scan
 
-Findings are written to the JSON report and persisted in the SQLite `findings`
-table for later query, context, and MCP workflows.
+Findings are written to the JSON report and persisted in the map database
+`findings` table for later query, context, and MCP workflows.
+
+## Agent Export
+
+Export one portable JSON file for agent workflows:
+
+```bash
+cloudmapper export agent \
+  --db infra/map.db \
+  --out infra.agent.json
+```
+
+The agent export includes the latest scan, resources, relationships, Terraform
+resource mapping, compare findings, evidence, blast radius, recommended actions,
+and graph nodes/edges in one file. Use `--out -` to print the JSON to stdout.
 
 ## UI
 
-Serve the local SQLite store as a Cytoscape graph:
+Serve the local map database as a Cytoscape graph:
 
 ```bash
-cloudmapper ui --db infra/infra.sqlite --bind 127.0.0.1:8765
+cloudmapper ui --db infra/map.db --bind 127.0.0.1:8765
 ```
 
 Open `http://127.0.0.1:8765` to inspect the latest AWS scan, Terraform state

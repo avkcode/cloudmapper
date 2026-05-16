@@ -8,8 +8,8 @@ use crate::model::Inventory;
 
 pub fn open_cloudmapper_db(path: &Path) -> Result<Connection> {
     ensure_parent_dir(path)?;
-    let connection =
-        Connection::open(path).with_context(|| format!("opening SQLite db {}", path.display()))?;
+    let connection = Connection::open(path)
+        .with_context(|| format!("opening map database {}", path.display()))?;
     init_schema(&connection)?;
     Ok(connection)
 }
@@ -142,7 +142,7 @@ pub fn init_schema(connection: &Connection) -> Result<()> {
             PRAGMA user_version = 1;
             "#,
         )
-        .context("initializing cloudmapper SQLite schema")?;
+        .context("initializing cloudmapper map schema")?;
     Ok(())
 }
 
@@ -300,9 +300,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn writes_inventory_snapshot_to_sqlite() {
+    fn writes_inventory_snapshot_to_map_db() {
         let temp = tempdir().unwrap();
-        let db_path = temp.path().join("infra.sqlite");
+        let db_path = temp.path().join("map.db");
         let inventory = sample_inventory();
 
         let scan_id = write_inventory_db(&db_path, &inventory).unwrap();

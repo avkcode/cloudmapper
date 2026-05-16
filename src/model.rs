@@ -184,8 +184,8 @@ impl Inventory {
                         .to_string(),
                 },
                 ManifestFile {
-                    path: "infra.sqlite".to_string(),
-                    description: "SQLite snapshot store for resources, relationships, scan errors, and imported Terraform state.".to_string(),
+                    path: "map.db".to_string(),
+                    description: "Cloudmapper map database for resources, relationships, scan errors, imported Terraform state, findings, and UI/API workflows.".to_string(),
                 },
             ],
             counts: ManifestCounts {

@@ -120,7 +120,7 @@ function renderGraph(payload) {
   updateSummary(payload.summary);
 
   if (!payload.nodes.length) {
-    $("#cy").innerHTML = '<div class="empty">No AWS scan found in this SQLite database</div>';
+    $("#cy").innerHTML = '<div class="empty">No AWS scan found in this map database</div>';
     return;
   }
   $("#cy").innerHTML = "";
@@ -225,7 +225,7 @@ function updateSummary(summary) {
   $("#metric-managed").textContent = summary.managedResources || 0;
   $("#metric-risk").textContent = (summary.criticalFindings || 0) + (summary.highFindings || 0);
   $("#graph-subtitle").textContent = summary.scanId || "no scan";
-  $("#db-line").textContent = summary.accountId ? `account ${summary.accountId}` : "infra.sqlite";
+  $("#db-line").textContent = summary.accountId ? `account ${summary.accountId}` : "map.db";
   $("#scan-line").textContent = summary.collectedAt ? `scan ${formatDate(summary.collectedAt)}` : "no scan loaded";
 }
 

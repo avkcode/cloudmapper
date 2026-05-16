@@ -1,3 +1,4 @@
+mod agent_export;
 mod aws_scan;
 mod compare;
 mod db;
@@ -12,6 +13,7 @@ use anyhow::{Error, Result};
 use clap::{Parser, ValueEnum};
 use tracing_subscriber::FmtSubscriber;
 
+use crate::agent_export::export_agent_bundle;
 use crate::aws_scan::{ScanOptions, scan_account};
 use crate::compare::compare_infra;
 use crate::terraform_state::{export_terraform_state, import_terraform_state_file};
@@ -33,7 +35,12 @@ enum Command {
     Scan(ScanArgs),
     /// Compare AWS reality with imported Terraform state and emit findings.
     Compare(CompareArgs),
-    /// Import or export Terraform state data in infra.sqlite.
+    /// Export cloudmapper data into portable formats.
+    Export {
+        #[command(subcommand)]
+        command: ExportCommand,
+    },
+    /// Import or export Terraform state data in map.db.
     Terraform {
         #[command(subcommand)]
         command: TerraformCommand,
@@ -75,8 +82,8 @@ struct ScanArgs {
 
 #[derive(Debug, Parser)]
 struct CompareArgs {
-    /// SQLite database path.
-    #[arg(long, default_value = "infra/infra.sqlite")]
+    /// Map database path.
+    #[arg(long, default_value = "infra/map.db")]
     db: PathBuf,
 
     /// AWS scan id. Defaults to the latest scan in the database.
@@ -93,10 +100,39 @@ struct CompareArgs {
 }
 
 #[derive(Debug, clap::Subcommand)]
+enum ExportCommand {
+    /// Export one agent-ready JSON file with resources, graph, Terraform mapping, and findings.
+    Agent(AgentExportArgs),
+}
+
+#[derive(Debug, Parser)]
+struct AgentExportArgs {
+    /// Map database path.
+    #[arg(long, default_value = "infra/map.db")]
+    db: PathBuf,
+
+    /// AWS scan id. Defaults to the latest scan in the database.
+    #[arg(long)]
+    scan_id: Option<String>,
+
+    /// Terraform state id. Defaults to the latest imported Terraform state when present.
+    #[arg(long)]
+    terraform_state_id: Option<String>,
+
+    /// Compare run id. Defaults to the latest compare findings run when present.
+    #[arg(long)]
+    compare_run_id: Option<String>,
+
+    /// Output file. Use "-" to print JSON to stdout.
+    #[arg(long, default_value = "infra.agent.json")]
+    out: PathBuf,
+}
+
+#[derive(Debug, clap::Subcommand)]
 enum TerraformCommand {
-    /// Import a Terraform state file into infra.sqlite.
+    /// Import a Terraform state file into map.db.
     Import(TerraformImportArgs),
-    /// Export imported Terraform state from infra.sqlite as normalized JSON.
+    /// Export imported Terraform state from map.db as normalized JSON.
     Export(TerraformExportArgs),
 }
 
@@ -106,8 +142,8 @@ struct TerraformImportArgs {
     #[arg(long)]
     state: PathBuf,
 
-    /// SQLite database path.
-    #[arg(long, default_value = "infra/infra.sqlite")]
+    /// Map database path.
+    #[arg(long, default_value = "infra/map.db")]
     db: PathBuf,
 
     /// Optional stable state id. Defaults to lineage/serial when available.
@@ -117,8 +153,8 @@ struct TerraformImportArgs {
 
 #[derive(Debug, Parser)]
 struct TerraformExportArgs {
-    /// SQLite database path.
-    #[arg(long, default_value = "infra/infra.sqlite")]
+    /// Map database path.
+    #[arg(long, default_value = "infra/map.db")]
     db: PathBuf,
 
     /// State id to export. Defaults to the latest imported Terraform state.
@@ -132,8 +168,8 @@ struct TerraformExportArgs {
 
 #[derive(Debug, Parser)]
 struct UiArgs {
-    /// SQLite database path.
-    #[arg(long, default_value = "infra/infra.sqlite")]
+    /// Map database path.
+    #[arg(long, default_value = "infra/map.db")]
     db: PathBuf,
 
     /// Local address to bind.
@@ -205,6 +241,30 @@ async fn run() -> Result<()> {
                 println!("{json}");
             }
         }
+        Command::Export { command } => match command {
+            ExportCommand::Agent(args) => {
+                let export = export_agent_bundle(
+                    &args.db,
+                    args.scan_id.as_deref(),
+                    args.terraform_state_id.as_deref(),
+                    args.compare_run_id.as_deref(),
+                )?;
+                let json = serde_json::to_string_pretty(&export)?;
+                if args.out.as_os_str() == "-" {
+                    println!("{json}");
+                } else {
+                    std::fs::write(&args.out, format!("{json}\n"))?;
+                    println!(
+                        "wrote agent export with {} resources, {} relationships, and {} findings from {} to {}",
+                        export.counts.resources,
+                        export.counts.relationships,
+                        export.counts.findings,
+                        args.db.display(),
+                        args.out.display()
+                    );
+                }
+            }
+        },
         Command::Terraform { command } => match command {
             TerraformCommand::Import(args) => {
                 let summary = import_terraform_state_file(&args.db, &args.state, args.state_id)?;

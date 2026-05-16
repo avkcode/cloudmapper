@@ -609,9 +609,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn loads_graph_payload_from_sqlite() {
+    fn loads_graph_payload_from_map_db() {
         let temp = tempdir().unwrap();
-        let db_path = temp.path().join("infra.sqlite");
+        let db_path = temp.path().join("map.db");
         write_inventory_db(&db_path, &sample_inventory()).unwrap();
 
         let graph = load_graph(&db_path).unwrap();
@@ -631,7 +631,7 @@ mod tests {
     #[test]
     fn overlays_findings_on_graph_nodes() {
         let temp = tempdir().unwrap();
-        let db_path = temp.path().join("infra.sqlite");
+        let db_path = temp.path().join("map.db");
         write_inventory_db(&db_path, &sample_public_inventory()).unwrap();
         seed_terraform_state(&db_path);
         compare_infra(&db_path, None, None).unwrap();
