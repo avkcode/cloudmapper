@@ -24,13 +24,9 @@ curl -L https://github.com/ingresslabs/cloudmapper/releases/latest/download/clou
 sudo install -m 0755 cloudmapper /usr/local/bin/cloudmapper
 ```
 
-## Screenshots
+## Article
 
-![Kubernetes graph inspector view](docs/screenshots/k8s-graph-detail.png)
-![Kubernetes graph overview](docs/screenshots/k8s-graph-overview.png)
-![AWS attack paths view](docs/screenshots/aws-attack-paths.png)
-![AWS graph inspector view](docs/screenshots/aws-graph-detail.png)
-![Kubernetes exposure atlas inspector view](docs/screenshots/k8s-exposure-atlas.png)
+[Read the project walkthrough on Medium](https://medium.com/p/d1178790626d)
 
 ## Quick Start
 
