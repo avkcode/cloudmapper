@@ -1272,6 +1272,9 @@ mod tests {
         assert!(APP_JS.contains("function renderRemediationView()"));
         assert!(APP_JS.contains("COST_BASIS"));
         assert!(APP_JS.contains("function renderMissionTerminal()"));
+        assert!(APP_JS.contains("function updateMissionTerminalTheme()"));
+        assert!(APP_JS.contains("state.viewMode === \"mission\""));
+        assert!(APP_JS.contains("state.graphThemeStale"));
         assert!(APP_JS.contains("function toggleSpreadMode()"));
         assert!(APP_JS.contains("function togglePanel(panel)"));
         assert!(XTERM_JS.contains("Terminal"));

@@ -35,6 +35,7 @@ const state = {
     basis: "month",
     groupBy: "service",
   },
+  graphThemeStale: false,
   terminal: {
     instance: null,
     resizeObserver: null,
@@ -668,6 +669,11 @@ function renderCurrentView() {
 
   if (graphActive) {
     disposeMissionTerminal();
+    if (state.graphThemeStale && state.graph?.nodes?.length) {
+      state.graphThemeStale = false;
+      renderGraph(state.graph);
+      return;
+    }
     if (state.cy) {
       applySpreadClasses();
       requestAnimationFrame(() => {
@@ -967,6 +973,13 @@ function missionTerminalTheme() {
         yellow: "#f5c542",
         white: "#ededed",
       };
+}
+
+function updateMissionTerminalTheme() {
+  const terminal = state.terminal.instance;
+  if (!terminal) return;
+  terminal.options.theme = missionTerminalTheme();
+  terminal.refresh(0, Math.max(0, terminal.rows - 1));
 }
 
 function fitMissionTerminal() {
@@ -3851,6 +3864,11 @@ function setTheme(theme, persist = true) {
     }
   }
   syncThemeToggle();
+  if (state.viewMode === "mission") {
+    updateMissionTerminalTheme();
+    state.graphThemeStale = Boolean(state.cy && state.graph?.nodes?.length);
+    return;
+  }
   applyThemeToGraph();
   renderCurrentView();
 }
